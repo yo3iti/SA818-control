@@ -3,3 +3,5 @@ This works by sending various serial commands and configuring transmit and recei
 
 This is useful for ham radio and other electronics enthusiasts that want to have a small C application to setup their SA818 transceiver.
 See here for more information: www.yo3iti.ro and www.alauda.ro
+
+For stable version get from main.
