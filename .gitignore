@@ -1,4 +1,9 @@
-sa818.py
-sa818ctl-ok.c
+#ignore folder
+ignored/
+
+#ignore file
 sa818ctl
-/ignored
+
+# Ignore system-generated files
+.DS_Store
+Thumbs.db
