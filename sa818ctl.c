@@ -34,7 +34,7 @@
 
 /**
  * @brief Forward declarations
- * 
+ *
  * @param progname
  * @version 1.0.2
  * @since 1.0.1
@@ -75,6 +75,49 @@ void monitor_serial(int fd, int rssi_interval);
 #define CLR_YELLOW "\033[1;33m"
 
 /**
+ * @brief CTCSS tone mapping to codes / Mapare coduri CTCSS la frecvențe
+ */
+typedef struct {
+    float freq;  // CTCSS frequency in Hz
+    int code;    // SA818 numeric code (1–50)
+} CTCSS_Map;
+
+/**
+ * @brief Table of CTCSS tone frequencies (EIA standard) / Tabel cu frecvențele CTCSS și coduri
+ */
+static const CTCSS_Map ctcss_table[] = {
+    {0, 0}, {67.0, 1}, {71.9, 2}, {74.4, 3}, {77.0, 4},
+    {79.7, 5}, {82.5, 6}, {85.4, 7}, {88.5, 8}, {91.5, 9},
+    {94.8, 10}, {97.4, 11}, {100.0, 12}, {103.5, 13}, {107.2, 14},
+    {110.9, 15}, {114.8, 16}, {118.8, 17}, {123.0, 18}, {127.3, 19},
+    {131.8, 20}, {136.5, 21}, {141.3, 22}, {146.2, 23}, {151.4, 24},
+    {156.7, 25}, {162.2, 26}, {167.9, 27},
+    {173.8, 28}, {179.9, 29}, {186.2, 30}, {192.8, 31},
+    {203.5, 32}, {210.7, 33}, {218.1, 34}, {225.7, 35},
+    {233.6, 36}, {241.8, 37}, {250.3, 38}
+};
+
+#define NUM_CTCSS (sizeof(ctcss_table) / sizeof(ctcss_table[0]))
+
+/**
+ * @brief Get the ctcss code object / Obține codul CTCSS pentru o anumită frecvență
+ * 
+ * @param frequency 
+ * @return int 
+ * @todo Verificare frecvențe
+ */
+int get_ctcss_code(float frequency) {
+    for (size_t i = 0; i < NUM_CTCSS; i++) {
+        if ( (frequency > ctcss_table[i].freq - 0.1f) &&
+             (frequency < ctcss_table[i].freq + 0.1f) ) {
+            return ctcss_table[i].code;
+        }
+    }
+    return -1;  // not found
+}
+
+
+/**
  * @brief Print help message
  * @brief Afișează mesajul de ajutor.
  *
@@ -99,9 +142,9 @@ void print_help(const char *progname)
     printf("  -f, --freq <MHz>" _(" Set TX/RX frequency (e.g. 145.500)\n",
                                   " Setează frecvența TX/RX (ex: 145.500)\n"));
     printf("  -t, --txtone <Hz>" _(" Set CTCSS TX tone frequency (e.g. 100.0)\n",
-                                     " Setează frecvența tonului CTCSS TX (ex: 100.0)\n"));
+                                   " Setează frecvența tonului CTCSS TX (ex: 100.0)\n"));
     printf("  -r, --rxtone <Hz>" _(" Set CTCSS RX tone frequency (e.g. 100.0)\n",
-                                     " Setează frecvența tonului CTCSS RX (ex: 100.0)\n"));
+                                   " Setează frecvența tonului CTCSS RX (ex: 100.0)\n"));
     printf("  -v, --volume <level>" _(" Set volume (0–8)\n",
                                       " Setează volumul (0–8)\n"));
     printf("  -s, --sql <level>" _(" Set squelch level (0–8)\n",
@@ -260,9 +303,9 @@ int init_serial(const char *device, int baudrate, int databits, int stopbits, ch
 
 /**
  * @brief Response parser / parsare răspuns
- * 
- * @param resp 
- * @return int 
+ *
+ * @param resp
+ * @return int
  * @version 1.0.2
  */
 int parse_response(const char *resp)
@@ -457,8 +500,8 @@ int main(int argc, char *argv[])
     char parity = 'N';
     int narrow = 0, monitor = 0, info = 0, rssi_interval = 0;
     double tx = 0, rx = 0;
-    double tx_tone = 0.0;
-    double rx_tone = 0.0;
+    float tx_tone = 0.0;
+    float rx_tone = 0.0;
     char command[256] = {0};
 
     static struct option long_opts[] = {
@@ -471,10 +514,10 @@ int main(int argc, char *argv[])
         {"monitor", no_argument, 0, 'm'},
         {"info", no_argument, 0, 'i'},
         {"rssi", required_argument, 0, 's'}, // changed from r
-        {"version", no_argument, 0, 'u'}, // changed from v
+        {"version", no_argument, 0, 'u'},    // changed from v
         {"txtone", required_argument, 0, 't'},
-        {"rxtone", required_argument, 0, 'r'},        
-        {"help", no_argument, 0, 'h'},      
+        {"rxtone", required_argument, 0, 'r'},
+        {"help", no_argument, 0, 'h'},
         {0, 0, 0, 0}};
 
     int opt;
@@ -520,18 +563,18 @@ int main(int argc, char *argv[])
             printf(CLR_CYAN _("SA818 control tool, version %s \u00A9 YO3ITI, yo3iti@gmail.com\n", "SA818 control, versiune %s \u00A9 YO3ITI, yo3iti@gmail.com\n") CLR_RESET, VERSION);
             break;
         case 't':
-        // CTCSS TX tone
-        // float
+            // CTCSS TX tone
+            // float
             tx_tone = atof(optarg);
             break;
         case 'r':
-        // CTCSS RX tone
-        // float
+            // CTCSS RX tone
+            // float
             rx_tone = atof(optarg);
             break;
         case 'h':
             print_help(argv[0]);
-            return 0;            
+            return 0;
         default:
             print_help(argv[0]);
             return 1;
@@ -558,9 +601,10 @@ int main(int argc, char *argv[])
     if (info)
         snprintf(command, sizeof(command), "AT+VERSION\r\n");
 
-    if (tx > 0) {
-        int tx_code = (int)(tx_tone * 10);  // Convert 100.0 Hz -> 1000
-        int rx_code = (int)(rx_tone * 10);
+    if (tx > 0)
+    {
+        int tx_code = get_ctcss_code(tx_tone); // Convert 100.0 Hz -> 1000
+        int rx_code = get_ctcss_code(rx_tone);
         snprintf(command, sizeof(command),
                  "AT+DMOSETGROUP=%d,%.4f,%.4f,%04d,%d,%04d\r\n",
                  narrow ? 0 : 1, tx, rx, tx_code, sql, rx_code);
