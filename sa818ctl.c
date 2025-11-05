@@ -18,7 +18,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-// test 1.0.2
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,9 +32,13 @@
 #include <sys/select.h>
 #include <sys/time.h>
 
-// ------------------------------------------------------------
-// Forward Declarations
-// ------------------------------------------------------------
+/**
+ * @brief Forward declarations
+ * 
+ * @param progname
+ * @version 1.0.2
+ * @since 1.0.1
+ */
 void print_help(const char *progname);
 int init_serial(const char *device, int baudrate, int databits, int stopbits, char parity);
 int send_command(int fd, const char *cmd);
@@ -42,11 +46,12 @@ int parse_freqs(const char *arg, double *tx, double *rx);
 void monitor_serial(int fd, int rssi_interval);
 
 #ifndef VERSION
-#define VERSION "1.0.1"
+#define VERSION "1.0.2"
 #endif
 
 /**
  * @brief Language selection / selecția limbii pentru executabilul final
+ * @version 1.0.2
  */
 #ifdef LANG_RO
 #define _(en, ro) ro
@@ -74,6 +79,7 @@ void monitor_serial(int fd, int rssi_interval);
  * @brief Afișează mesajul de ajutor.
  *
  * @param progname Name of the program / Numele programului.
+ * @version 1.0.2
  */
 void print_help(const char *progname)
 {
@@ -131,6 +137,7 @@ void handle_sigint(int _)
  * @brief Întârziere în milisecunde.
  *
  * @param ms Value in milliseconds / Valoare în milisecunde.
+ * @version 1.0.2
  */
 void delay_ms(int ms)
 {
@@ -182,6 +189,7 @@ speed_t get_baudrate(int baud)
  * @param parity
  * @return int File descriptor for the opened serial port, or -1 on error.
  * @return int Descriptor de fișier pentru portul serial deschis, sau -1 în caz de eroare.
+ * @version 1.0.2
  */
 int init_serial(const char *device, int baudrate, int databits, int stopbits, char parity)
 {
@@ -250,7 +258,13 @@ int init_serial(const char *device, int baudrate, int databits, int stopbits, ch
     return fd;
 }
 
-// ================= Response Parser =================
+/**
+ * @brief Response parser / parsare răspuns
+ * 
+ * @param resp 
+ * @return int 
+ * @version 1.0.2
+ */
 int parse_response(const char *resp)
 {
     if (strstr(resp, "+DMOCONNECT:0"))
@@ -300,6 +314,7 @@ int parse_response(const char *resp)
  * @param fd Descriptorul de fișier pentru portul serial.
  * @param cmd Comanda de trimis.
  * @return 0 dacă comanda a fost trimisă cu succes și răspunsul a fost procesat, -1 în caz de eroare.
+ * @version 1.0.2
  */
 int send_command(int fd, const char *cmd)
 {
@@ -330,6 +345,7 @@ int send_command(int fd, const char *cmd)
  * @param tx transmit frequency output / frecvența de transmisie output
  * @param rx receive frequency output / frecvența de recepție output
  * @return int 0 dacă analiza a avut succes, -1 în caz de eroare.
+ * @version 1.0.2
  */
 int parse_freqs(const char *arg, double *tx, double *rx)
 {
@@ -358,6 +374,7 @@ int parse_freqs(const char *arg, double *tx, double *rx)
  * @param fd Descriptor de fișier pentru portul serial.
  * @param rssi_interval Interval in seconds to poll RSSI. If 0, RSSI polling is disabled.
  * @param rssi_interval Interval în secunde pentru interogarea RSSI. Dacă este 0, interogarea RSSI este dezactivată.
+ * @version 1.0.2
  */
 void monitor_serial(int fd, int rssi_interval)
 {
@@ -431,6 +448,7 @@ void monitor_serial(int fd, int rssi_interval)
  * @param argv
  * @return int 0 on success, 1 on failure
  * @return int 0 la succes, 1 la eșec
+ * @version 1.0.2
  */
 int main(int argc, char *argv[])
 {
