@@ -61,15 +61,15 @@ run: $(TARGET)
 
 # Help info
 help:
-	@echo "SA818 Control Tool Makefile"
+	@echo "SA818 Control Tool Makefile / makefile pentru compilarea aplicației"
 	@echo ""
-	@echo "Usage:"
-	@echo "  make            - Build the program (optimized)"
-	@echo "  make debug      - Build with debug info (-g)"
-	@echo "  make install    - Install binary to /usr/bin"
-	@echo "  make uninstall  - Remove installed binary"
-	@echo "  make clean      - Remove build files"
-	@echo "  make run        - Build and run (sudo)"
-	@echo "  make help       - Show this help message"
+	@echo "Usage: / Utilizare:"
+	@echo "  make            - Build the program (optimized) / build optimizat"
+	@echo "  make debug      - Build with debug info (-g) / build cu debug (-g)"
+	@echo "  make install    - Install binary to /usr/bin / instalare în /usr/bin"
+	@echo "  make uninstall  - Remove installed binary / dezinstalare"
+	@echo "  make clean      - Remove build files / ștergere fișiere post-build"
+	@echo "  make run        - Build and run (sudo) / build și compilare (sudo)"
+	@echo "  make help       - Show this help message / acest mesaj"
 
 .PHONY: all clean debug run help install uninstall

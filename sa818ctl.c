@@ -4,7 +4,7 @@
  *
  * @author Miron Iancu <miancuster@gmail.com>
  *
- * @copyright Copyright (c) 2025 Miron Iancu
+ * @copyright Copyright (c) 2025 Miron Iancu, yo3iti@gmail.com
  * @todo Add more features like CTCSS/DCS, DTMF, etc.
  *
  * the Free Software Foundation, either version 3 of the License, or
@@ -45,10 +45,9 @@ void monitor_serial(int fd, int rssi_interval);
 #define VERSION "1.0.1"
 #endif
 
-// ------------------------------------------------------------
-// Language Selection
-// ------------------------------------------------------------
-// Compile with -DLANG_RO for Romanian, or default is English
+/**
+ * @brief Language selection / selecția limbii pentru executabilul final
+ */
 #ifdef LANG_RO
 #define _(en, ro) ro
 #else
@@ -56,7 +55,7 @@ void monitor_serial(int fd, int rssi_interval);
 #endif
 
 // ---- Fix for missing CRTSCTS on minimal systems ----
-// ---- Corecție pentru lipsa CRTSCTS de pe sistemele minimale ----
+// ---- Corecție pentru lipsa CRTSCTS de pe sistemele cu resurse mai sărace ----
 #ifndef CRTSCTS
 #define CRTSCTS 020000000000
 #endif
