@@ -31,91 +31,44 @@
 #include <signal.h>
 #include <sys/select.h>
 #include <sys/time.h>
-
-/**
- * @brief Forward declarations
- *
- * @param progname
- * @version 1.0.2
- * @since 1.0.1
- */
-void print_help(const char *progname);
-int init_serial(const char *device, int baudrate, int databits, int stopbits, char parity);
-int send_command(int fd, const char *cmd);
-int parse_freqs(const char *arg, double *tx, double *rx);
-void monitor_serial(int fd, int rssi_interval);
-
-#ifndef VERSION
-#define VERSION "1.0.2"
-#endif
-
-/**
- * @brief Language selection / selecția limbii pentru executabilul final
- * @version 1.0.2
- */
-#ifdef LANG_RO
-#define _(en, ro) ro
-#else
-#define _(en, ro) en
-#endif
-
-// ---- Fix for missing CRTSCTS on minimal systems ----
-// ---- Corecție pentru lipsa CRTSCTS de pe sistemele cu resurse mai sărace ----
-#ifndef CRTSCTS
-#define CRTSCTS 020000000000
-#endif
-
-#define DEFAULT_PORT "/dev/serial0"
-
-// ANSI color macros
-#define CLR_RESET "\033[0m"
-#define CLR_GREEN "\033[1;32m"
-#define CLR_RED "\033[1;31m"
-#define CLR_CYAN "\033[1;36m"
-#define CLR_YELLOW "\033[1;33m"
+#include "sa818ctl.h"
 
 /**
  * @brief CTCSS tone mapping to codes / Mapare coduri CTCSS la frecvențe
  */
-typedef struct {
-    float freq;  // CTCSS frequency in Hz
-    int code;    // SA818 numeric code (1–50)
+typedef struct
+{
+    float freq; // CTCSS frequency in Hz
+    int code;   // SA818 numeric code (1–50)
 } CTCSS_Map;
 
 /**
  * @brief Table of CTCSS tone frequencies (EIA standard) / Tabel cu frecvențele CTCSS și coduri
  */
 static const CTCSS_Map ctcss_table[] = {
-    {0, 0}, {67.0, 1}, {71.9, 2}, {74.4, 3}, {77.0, 4},
-    {79.7, 5}, {82.5, 6}, {85.4, 7}, {88.5, 8}, {91.5, 9},
-    {94.8, 10}, {97.4, 11}, {100.0, 12}, {103.5, 13}, {107.2, 14},
-    {110.9, 15}, {114.8, 16}, {118.8, 17}, {123.0, 18}, {127.3, 19},
-    {131.8, 20}, {136.5, 21}, {141.3, 22}, {146.2, 23}, {151.4, 24},
-    {156.7, 25}, {162.2, 26}, {167.9, 27},
-    {173.8, 28}, {179.9, 29}, {186.2, 30}, {192.8, 31},
-    {203.5, 32}, {210.7, 33}, {218.1, 34}, {225.7, 35},
-    {233.6, 36}, {241.8, 37}, {250.3, 38}
-};
+    {0, 0}, {67.0, 1}, {71.9, 2}, {74.4, 3}, {77.0, 4}, {79.7, 5}, {82.5, 6}, {85.4, 7}, {88.5, 8}, {91.5, 9}, {94.8, 10}, {97.4, 11}, {100.0, 12}, {103.5, 13}, {107.2, 14}, {110.9, 15}, {114.8, 16}, {118.8, 17}, {123.0, 18}, {127.3, 19}, {131.8, 20}, {136.5, 21}, {141.3, 22}, {146.2, 23}, {151.4, 24}, {156.7, 25}, {162.2, 26}, {167.9, 27}, {173.8, 28}, {179.9, 29}, {186.2, 30}, {192.8, 31}, {203.5, 32}, {210.7, 33}, {218.1, 34}, {225.7, 35}, {233.6, 36}, {241.8, 37}, {250.3, 38}};
 
 #define NUM_CTCSS (sizeof(ctcss_table) / sizeof(ctcss_table[0]))
 
 /**
  * @brief Get the ctcss code object / Obține codul CTCSS pentru o anumită frecvență
- * 
- * @param frequency 
- * @return int 
+ *
+ * @param frequency
+ * @return int
  * @todo Verificare frecvențe
  */
-int get_ctcss_code(float frequency) {
-    for (size_t i = 0; i < NUM_CTCSS; i++) {
-        if ( (frequency > ctcss_table[i].freq - 0.1f) &&
-             (frequency < ctcss_table[i].freq + 0.1f) ) {
+int get_ctcss_code(float frequency)
+{
+    for (size_t i = 0; i < NUM_CTCSS; i++)
+    {
+        if ((frequency > ctcss_table[i].freq - 0.1f) &&
+            (frequency < ctcss_table[i].freq + 0.1f))
+        {
             return ctcss_table[i].code;
         }
     }
-    return -1;  // not found
+    return -1; // not found
 }
-
 
 /**
  * @brief Print help message
@@ -514,7 +467,7 @@ int main(int argc, char *argv[])
         {"monitor", no_argument, 0, 'm'},
         {"info", no_argument, 0, 'i'},
         {"rssi", required_argument, 0, 's'}, // changed from r
-        {"version", no_argument, 0, 'u'},    // changed from v
+        {"version", required_argument, 0, 'u'},    // changed from v
         {"txtone", required_argument, 0, 't'},
         {"rxtone", required_argument, 0, 'r'},
         {"help", no_argument, 0, 'h'},
