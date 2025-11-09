@@ -43,6 +43,19 @@ typedef struct
 } CTCSS_Map;
 
 /**
+ * @brief Struct for band limit checks / pentru verificarea limitelor de frecvență
+ * @since 1.0.2
+ * @version 1.0.2
+ *
+ */
+typedef struct
+{
+    double f_min;
+    double f_max;
+    const char *band_name;
+} Band;
+
+/**
  * @brief Table of CTCSS tone frequencies (EIA standard) / Tabel cu frecvențele CTCSS și coduri
  */
 static const CTCSS_Map ctcss_table[] = {
@@ -69,6 +82,82 @@ int get_ctcss_code(float frequency)
     }
     return -1; // not found
 }
+
+/**
+ * @brief To print nicely ham radio bands / pentru afișarea corectă a benzilor de radioamatori
+ *
+ * @param f
+ * @return const char*
+ *
+ */
+const char *band_name(double *f)
+{
+    switch ((int)(*f))
+    {
+    case 144 ... 146:
+        return "2m VHF";
+    case 430 ... 440:
+        return "70cm UHF";
+    default:
+        return "OUT OF BAND";
+    }
+} // end const char* band_name
+
+/**
+ * @brief Check frequency input / Verifică frecvențele
+ *
+ * @param tx Transmit frequency / frecvența de transmisie
+ * @param rx Receive frequency / frecvența de recepție
+ * @return int
+ */
+int check_band(double *tx, double *rx)
+{
+    Band bands[] = {
+        {144.000, 145.9875, "2m VHF"},
+        {430.000, 440.000, "70cm UHF"},
+        {0.0, 0.0, NULL} // terminator
+    };
+
+    int ok_tx = 0, ok_rx = 0;
+
+    for (int i = 0; bands[i].band_name; i++)
+    {
+        if (*tx >= bands[i].f_min && *tx <= bands[i].f_max)
+            ok_tx = 1;
+        if (*rx >= bands[i].f_min && *rx <= bands[i].f_max)
+            ok_rx = 1;
+    }
+
+    // Print messages with colors
+    if (!ok_tx)
+    {
+        printf(CLR_YELLOW _("⚠️  TX frequency %.4f MHz is outside ham radio band %s.\n",
+                            "⚠️  Frecvența de transmisie %.4f MHz nu este în banda de %s.\n") CLR_RESET,
+               *tx, band_name(tx));
+    }
+    else
+    {
+        printf(CLR_GREEN _("✅ TX frequency %.4f MHz is within ham band %s.\n",
+                           "✅ TX OK: Frecvența de transmisie %.4f MHz este în banda de %s.\n") CLR_RESET,
+               *tx, band_name(tx));
+    }
+
+    if (!ok_rx)
+    {
+        printf(CLR_YELLOW _("⚠️  TX frequency %.4f MHz is outside ham radio band %s.\n",
+                            "⚠️  Frecvența de recepție %.4f MHz nu este în banda de %s.\n") CLR_RESET,
+               *rx, band_name(rx));
+    }
+    else
+    {
+        printf(CLR_GREEN _("✅ RX frequency %.4f MHz is within ham band %s.\n",
+                           "✅ RX OK: Frecvența de recepție %.4f MHz este în banda de %s.\n") CLR_RESET,
+               *rx, band_name(rx));
+    }
+
+    // Return success/failure
+    return (ok_tx && ok_rx);
+} // end int check_band()
 
 /**
  * @brief Print help message
@@ -98,6 +187,8 @@ void print_help(const char *progname)
                                    " Setează frecvența tonului CTCSS TX (ex: 100.0)\n"));
     printf("  -r, --rxtone <Hz>" _(" Set CTCSS RX tone frequency (e.g. 100.0)\n",
                                    " Setează frecvența tonului CTCSS RX (ex: 100.0)\n"));
+    printf("  -a, --tail Open/Close" _(" Set tail to open or close\n",
+                                       " Setează coada deschisă sau închisă\n"));
     printf("  -v, --volume <level>" _(" Set volume (0–8)\n",
                                       " Setează volumul (0–8)\n"));
     printf("  -s, --sql <level>" _(" Set squelch level (0–8)\n",
@@ -114,7 +205,7 @@ void print_help(const char *progname)
                             " Afișează acest mesaj de ajutor\n"));
 
     printf("  -u, --version" _(" Displays firmware version\n",
-                            " Afișează versiunea de firmware\n"));
+                               " Afișează versiunea de firmware\n"));
     printf(_("\nExamples for simple setup:\n",
              "\nExemple, pentru setare simplă:\n"));
     printf(" sudo %s --freq 145.500 --sql 3 --txtone 100.0 --rxtone 100.0\n", progname);
@@ -356,6 +447,8 @@ int send_command(int fd, const char *cmd)
  * @param rx receive frequency output / frecvența de recepție output
  * @return int 0 dacă analiza a avut succes, -1 în caz de eroare.
  * @version 1.0.2
+ * added tail
+ * added check of frequencies
  */
 int parse_freqs(const char *arg, double *tx, double *rx)
 {
@@ -370,12 +463,27 @@ int parse_freqs(const char *arg, double *tx, double *rx)
             return -1;
         *rx = *tx;
     }
-    if (*tx < 100.0 || *tx > 480.0)
+
+    if (*tx < 144.0 || *tx > 440.0)
+    {
+        printf(CLR_YELLOW _("Chosen transmit frequency is outside ham allocations\n",
+                            "Frecvența de transmise nu este din spectrul alocat radioamatorilor\n") CLR_RESET);
         return -1;
-    if (*rx < 100.0 || *rx > 480.0)
+    }
+
+    if (*rx < 144.0 || *rx > 440.0)
+    {
+        printf(CLR_YELLOW _("Chosen receive frequency is outside ham allocations\n",
+                            "Frecvența de recepție nu este din spectrul alocat radioamatorilor\n") CLR_RESET);
         return -1;
+    }
     return 0;
 }
+
+/*
+int parse_tail(const char *arg, const char *tail)
+{
+} */
 
 /**
  * @brief Monitor serial port for incoming data and RSSI polling.
@@ -476,19 +584,20 @@ int main(int argc, char *argv[])
         {"device", required_argument, 0, 'd'},
         {"sql", required_argument, 0, 'q'},
         {"freq", required_argument, 0, 'f'},
+        {"txtone", required_argument, 0, 't'},
+        {"rxtone", required_argument, 0, 'r'},
+        {"tail", required_argument, 0, 'a'},
         {"narrow", no_argument, 0, 'n'},
         {"volume", required_argument, 0, 'v'},
         {"monitor", no_argument, 0, 'm'},
         {"info", no_argument, 0, 'i'},
         {"rssi", required_argument, 0, 's'}, // changed from r
         {"version", no_argument, 0, 'u'},    // changed from v
-        {"txtone", required_argument, 0, 't'},
-        {"rxtone", required_argument, 0, 'r'},
         {"help", no_argument, 0, 'h'},
         {0, 0, 0, 0}};
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "p:d:q:f:nv:mis:u:t:r:h", long_opts, NULL)) != -1)
+    while ((opt = getopt_long(argc, argv, "p:d:q:f:t:r:a:nv:mis:u:h", long_opts, NULL)) != -1)
     {
         switch (opt)
         {
@@ -510,6 +619,9 @@ int main(int argc, char *argv[])
                                           "Formatul frecvenței este incorect. Folosiți 145.500 sau 145.500,145.600 etc.") CLR_RESET "\n");
                 return 1;
             }
+            break;
+        case 'a':
+            snprintf(command, sizeof(command), "AT+SETTAIL=%d", atoi(optarg));
             break;
         case 'n':
             narrow = 1;
@@ -558,7 +670,8 @@ int main(int argc, char *argv[])
     printf(_("🔌 Sending AT+DMOCONNECT...\n", "🔌 Trimit AT+DMOCONNECT...\n"));
     if (send_command(fd, "AT+DMOCONNECT\r\n") != 0)
     {
-        printf(CLR_RED _("❌ Could not connect to SA818. Check TX/RX wiring.", "❌ Nu m-am putut conecta la SA818. Verifică conexiunea TX/RX.") CLR_RESET "\n");
+        printf(CLR_RED _("❌ Could not connect to SA818. Check TX/RX wiring.",
+                         "❌ Nu m-am putut conecta la SA818. Verifică conexiunea TX/RX.") CLR_RESET "\n");
         close(fd);
         return 1;
     }
@@ -570,6 +683,17 @@ int main(int argc, char *argv[])
 
     if (tx > 0)
     {
+        double tx_freq = tx;
+        double rx_freq = tx;
+
+        if (!check_band(&tx_freq, &rx_freq))
+        {
+            printf(CLR_RED _("❌ Aborting configuration — out-of-band frequencies.\n",
+                                "❌ Frecvențe din afara benzii de radioamatori. Configurare anulată.\n") CLR_RESET);
+            close(fd);
+            return 1;
+        }
+
         int tx_code = get_ctcss_code(tx_tone); // Convert 100.0 Hz -> 1000
         int rx_code = get_ctcss_code(rx_tone);
         snprintf(command, sizeof(command),

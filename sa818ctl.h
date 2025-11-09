@@ -8,9 +8,11 @@
  * @version 1.0.2
  * @since 1.0.1
  */
+
 void print_help(const char *progname);
 void print_version();
 int get_ctcss_code(float frequency);
+int check_band(double *tx, double *rx);
 int init_serial(const char *device, int baudrate, int databits, int stopbits, char parity);
 int send_command(int fd, const char *cmd);
 int parse_freqs(const char *arg, double *tx, double *rx);
