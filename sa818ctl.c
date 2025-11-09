@@ -112,6 +112,9 @@ void print_help(const char *progname)
                                        " Interoghează RSSI la fiecare <interval> secunde, în modul monitorizare\n"));
     printf("  -h, --help" _(" Show this help message\n",
                             " Afișează acest mesaj de ajutor\n"));
+
+    printf("  -u, --version" _(" Displays firmware version\n",
+                            " Afișează versiunea de firmware\n"));
     printf(_("\nExamples for simple setup:\n",
              "\nExemple, pentru setare simplă:\n"));
     printf(" sudo %s --freq 145.500 --sql 3 --txtone 100.0 --rxtone 100.0\n", progname);
@@ -119,6 +122,17 @@ void print_help(const char *progname)
     printf(" sudo %s --port /dev/ttyUSB0 --monitor -s 5\n", progname);
     printf(" sudo %s -p /dev/ttyUSB0 -m -s 5\n", progname);
     printf("\n73 de YO3ITI\n\n");
+}
+
+/**
+ * @brief Prints version
+ *
+ */
+void print_version()
+{
+    printf(CLR_CYAN _("\nSA818 control tool, version %s \u00A9 YO3ITI, yo3iti@gmail.com\n\n",
+                      "\nSA818 control, versiune %s \u00A9 YO3ITI, yo3iti@gmail.com\n\n") CLR_RESET,
+           VERSION);
 }
 
 static volatile int keep_running = 1;
@@ -467,14 +481,14 @@ int main(int argc, char *argv[])
         {"monitor", no_argument, 0, 'm'},
         {"info", no_argument, 0, 'i'},
         {"rssi", required_argument, 0, 's'}, // changed from r
-        {"version", required_argument, 0, 'u'},    // changed from v
+        {"version", no_argument, 0, 'u'},    // changed from v
         {"txtone", required_argument, 0, 't'},
         {"rxtone", required_argument, 0, 'r'},
         {"help", no_argument, 0, 'h'},
         {0, 0, 0, 0}};
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "p:d:b:t:s:l:q:f:nv:mir:u:t:r:h", long_opts, NULL)) != -1)
+    while ((opt = getopt_long(argc, argv, "p:d:q:f:nv:mis:u:t:r:h", long_opts, NULL)) != -1)
     {
         switch (opt)
         {
@@ -513,8 +527,8 @@ int main(int argc, char *argv[])
             rssi_interval = atoi(optarg);
             break;
         case 'u':
-            printf(CLR_CYAN _("SA818 control tool, version %s \u00A9 YO3ITI, yo3iti@gmail.com\n", "SA818 control, versiune %s \u00A9 YO3ITI, yo3iti@gmail.com\n") CLR_RESET, VERSION);
-            break;
+            print_version();
+            return 0;
         case 't':
             // CTCSS TX tone
             // float
