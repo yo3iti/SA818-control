@@ -187,7 +187,7 @@ void print_help(const char *progname)
                                    " Setează frecvența tonului CTCSS TX (ex: 100.0)\n"));
     printf("  -r, --rxtone <Hz>" _(" Set CTCSS RX tone frequency (e.g. 100.0)\n",
                                    " Setează frecvența tonului CTCSS RX (ex: 100.0)\n"));
-    printf("  -a, --tail Open/Close" _(" Set tail to open or close\n",
+    printf("  -a, --tail <1/0>" _(" Set tail to open or close\n",
                                        " Setează coada deschisă sau închisă\n"));
     printf("  -v, --volume <level>" _(" Set volume (0–8)\n",
                                       " Setează volumul (0–8)\n"));
@@ -573,7 +573,7 @@ int main(int argc, char *argv[])
     const char *device = DEFAULT_PORT;
     int baudrate = 9600, databits = 8, stopbits = 1, sql = 3;
     char parity = 'N';
-    int narrow = 0, monitor = 0, info = 0, rssi_interval = 0;
+    int narrow = 0, monitor = 0, info = 0, rssi_interval = 0, tail = 1;
     double tx = 0, rx = 0;
     float tx_tone = 0.0;
     float rx_tone = 0.0;
@@ -706,6 +706,11 @@ int main(int argc, char *argv[])
 
     if (monitor)
         monitor_serial(fd, rssi_interval);
+
+    if (tail)
+        snprintf(command, sizeof(command), "AT+SETTAIL=1\r\n");
+
+    
 
     close(fd);
     return 0;
