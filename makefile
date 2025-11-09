@@ -7,7 +7,7 @@ CC       := gcc
 CFLAGS   := -Wall -Wextra -O2
 LDFLAGS  :=
 TARGET   := sa818ctl
-SRC      := sa818ctl.c
+SRC      := *.c
 PREFIX   := /usr/bin
 
 # Default language if not provided
