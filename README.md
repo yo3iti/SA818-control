@@ -13,9 +13,35 @@ For stable version get the main.
 
 ## Build and installation
 
-Please clone repo and use 
+Please clone repo and use command `make` for build. To use the romanian language variation, please use `make LANG=ro`.
 
-`test command`
+The target is names `sa818ctl`. You can modify the build by altering `makefile`. Use `make install` to install application in `/usr/bin`. 
 
-# Usage
+## Usage
+
+For help:
+```
+sa818ctl -h
+```
+or
+```
+sa818ctl --help
+```
+Some syntax examples are displayed in the help too
+
+Basic syntax
+
+```
+sa818ctl -f 145.000 -t 103.5 -r 103.5
+```
+or
+```
+sa818ctl -freq 145.000 --txtone 103.5 --rxtone 103.5
+```
+for tail open/close
+```
+sa818ctl -a 1/0
+```
+
+
 
