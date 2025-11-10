@@ -49,8 +49,6 @@ void print_version()
            VERSION);
 }
 
-
-
 /**
  * @brief Initialize serial port
  * @brief Inițializează portul serial cu setările specificate.
@@ -152,6 +150,22 @@ int parse_response(const char *resp)
     }
     else if (strstr(resp, ":0"))
     {
+        if (strstr(resp, "+DMOSETVOLUME:0"))
+        {
+            printf(CLR_GREEN _("✅ Volume command OK.", "✅ Modificare corectă a volumului.") CLR_RESET "\n");
+            return 0;
+        }
+        if (strstr(resp, "+DMOSETTAIL:0"))
+        {
+            printf(CLR_GREEN _("✅ Tail command OK.", "✅ Modificare corectă a cozii SQL.") CLR_RESET "\n");
+            return 0;
+        }
+        if (strstr(resp, "+DMOSETFILTER:0"))
+        {
+            printf(CLR_GREEN _("✅ Filter command OK.", "✅ Modificare corectă a filtrelor.") CLR_RESET "\n");
+            return 0;
+        }
+
         printf(CLR_GREEN _("✅ SA818 Command OK.", "✅ Comandă SA818 corectă.") CLR_RESET "\n");
         return 0;
     }
@@ -209,8 +223,6 @@ int send_command(int fd, const char *cmd)
     }
     return -1;
 }
-
-
 
 /*
 int parse_tail(const char *arg, const char *tail)
@@ -421,7 +433,7 @@ int main(int argc, char *argv[])
         if (!check_band(&tx_freq, &rx_freq))
         {
             printf(CLR_RED _("❌ Aborting configuration — out-of-band frequencies.\n",
-                                "❌ Frecvențe din afara benzii de radioamatori. Configurare anulată.\n") CLR_RESET);
+                             "❌ Frecvențe din afara benzii de radioamatori. Configurare anulată.\n") CLR_RESET);
             close(fd);
             return 1;
         }
@@ -441,8 +453,6 @@ int main(int argc, char *argv[])
 
     if (tail)
         snprintf(command, sizeof(command), "AT+SETTAIL=1\r\n");
-
-    
 
     close(fd);
     return 0;
