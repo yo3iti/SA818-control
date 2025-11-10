@@ -32,194 +32,24 @@
 #include <sys/select.h>
 #include <sys/time.h>
 
+#include "helper.h"
+#include "sa818ctl.h"
+#include "help.h"
+#include "frequency.h"
+#include "ctcss.h"
+
 /**
- * @brief Forward declarations
+ * @brief Prints version
  *
- * @param progname
- * @version 1.0.2
- * @since 1.0.1
  */
-void print_help(const char *progname);
-int init_serial(const char *device, int baudrate, int databits, int stopbits, char parity);
-int send_command(int fd, const char *cmd);
-int parse_freqs(const char *arg, double *tx, double *rx);
-void monitor_serial(int fd, int rssi_interval);
-
-#ifndef VERSION
-#define VERSION "1.0.2"
-#endif
-
-/**
- * @brief Language selection / selecția limbii pentru executabilul final
- * @version 1.0.2
- */
-#ifdef LANG_RO
-#define _(en, ro) ro
-#else
-#define _(en, ro) en
-#endif
-
-// ---- Fix for missing CRTSCTS on minimal systems ----
-// ---- Corecție pentru lipsa CRTSCTS de pe sistemele cu resurse mai sărace ----
-#ifndef CRTSCTS
-#define CRTSCTS 020000000000
-#endif
-
-#define DEFAULT_PORT "/dev/serial0"
-
-// ANSI color macros
-#define CLR_RESET "\033[0m"
-#define CLR_GREEN "\033[1;32m"
-#define CLR_RED "\033[1;31m"
-#define CLR_CYAN "\033[1;36m"
-#define CLR_YELLOW "\033[1;33m"
-
-/**
- * @brief CTCSS tone mapping to codes / Mapare coduri CTCSS la frecvențe
- */
-typedef struct {
-    float freq;  // CTCSS frequency in Hz
-    int code;    // SA818 numeric code (1–50)
-} CTCSS_Map;
-
-/**
- * @brief Table of CTCSS tone frequencies (EIA standard) / Tabel cu frecvențele CTCSS și coduri
- */
-static const CTCSS_Map ctcss_table[] = {
-    {0, 0}, {67.0, 1}, {71.9, 2}, {74.4, 3}, {77.0, 4},
-    {79.7, 5}, {82.5, 6}, {85.4, 7}, {88.5, 8}, {91.5, 9},
-    {94.8, 10}, {97.4, 11}, {100.0, 12}, {103.5, 13}, {107.2, 14},
-    {110.9, 15}, {114.8, 16}, {118.8, 17}, {123.0, 18}, {127.3, 19},
-    {131.8, 20}, {136.5, 21}, {141.3, 22}, {146.2, 23}, {151.4, 24},
-    {156.7, 25}, {162.2, 26}, {167.9, 27},
-    {173.8, 28}, {179.9, 29}, {186.2, 30}, {192.8, 31},
-    {203.5, 32}, {210.7, 33}, {218.1, 34}, {225.7, 35},
-    {233.6, 36}, {241.8, 37}, {250.3, 38}
-};
-
-#define NUM_CTCSS (sizeof(ctcss_table) / sizeof(ctcss_table[0]))
-
-/**
- * @brief Get the ctcss code object / Obține codul CTCSS pentru o anumită frecvență
- * 
- * @param frequency 
- * @return int 
- * @todo Verificare frecvențe
- */
-int get_ctcss_code(float frequency) {
-    for (size_t i = 0; i < NUM_CTCSS; i++) {
-        if ( (frequency > ctcss_table[i].freq - 0.1f) &&
-             (frequency < ctcss_table[i].freq + 0.1f) ) {
-            return ctcss_table[i].code;
-        }
-    }
-    return -1;  // not found
-}
-
-
-/**
- * @brief Print help message
- * @brief Afișează mesajul de ajutor.
- *
- * @param progname Name of the program / Numele programului.
- * @version 1.0.2
- */
-void print_help(const char *progname)
+void print_version()
 {
-    printf(_("\nSA818 Control Tool v1.0\n",
-             "\nAplicație pentru controlul SA818 v1.0\n"));
-    printf(_("Control SA818 VHF/UHF Radio Module via Serial Interface.\n",
-             "Controlează modulul radio SA818 VHF/UHF prin interfață serială.\n"));
-    printf(_("Usage: %s [options]\n\n",
-             "Utilizare: %s [opțiuni]\n"),
-           progname);
-    printf(_("You can also install it in /usr/bin.\n\n",
-             "De asemenea, poate fi instalată în /usr/bin.\n\n"));
-    printf(_("Options:\n",
-             "Opțiuni:\n"));
-    printf("  -p, --port <device>" _(" Serial port device (default: /dev/serial0.\n",
-                                     " Portul serial al dispozitivului (implicit: /dev/serial0).\n"));
-    printf("  -f, --freq <MHz>" _(" Set TX/RX frequency (e.g. 145.500)\n",
-                                  " Setează frecvența TX/RX (ex: 145.500)\n"));
-    printf("  -t, --txtone <Hz>" _(" Set CTCSS TX tone frequency (e.g. 100.0)\n",
-                                   " Setează frecvența tonului CTCSS TX (ex: 100.0)\n"));
-    printf("  -r, --rxtone <Hz>" _(" Set CTCSS RX tone frequency (e.g. 100.0)\n",
-                                   " Setează frecvența tonului CTCSS RX (ex: 100.0)\n"));
-    printf("  -v, --volume <level>" _(" Set volume (0–8)\n",
-                                      " Setează volumul (0–8)\n"));
-    printf("  -s, --sql <level>" _(" Set squelch level (0–8)\n",
-                                   " Setează nivelul de squelch (0–8)\n"));
-    printf("  -n, --narrow" _(" Use narrow bandwidth (1-0)\n",
-                              " Folosește lățime de bandă îngustă (1-0)\n"));
-    printf("  -i, --info" _(" Show module info (firmware)\n",
-                            " Afișează informații despre modul (firmware)\n"));
-    printf("  -m, --monitor" _(" Monitor serial output (Ctrl+C to stop)\n",
-                               " Monitorizează ieșirea serială (Ctrl+C pentru a opri)\n"));
-    printf("  -s, --rssi <interval>" _(" Poll RSSI every <interval> seconds in monitor mode\n",
-                                       " Interoghează RSSI la fiecare <interval> secunde, în modul monitorizare\n"));
-    printf("  -h, --help" _(" Show this help message\n",
-                            " Afișează acest mesaj de ajutor\n"));
-    printf(_("\nExamples for simple setup:\n",
-             "\nExemple, pentru setare simplă:\n"));
-    printf(" sudo %s --freq 145.500 --sql 3 --txtone 100.0 --rxtone 100.0\n", progname);
-    printf(" sudo %s -f 145.500 -q 3 -t 100.0 -r 100.0\n", progname);
-    printf(" sudo %s --port /dev/ttyUSB0 --monitor -s 5\n", progname);
-    printf(" sudo %s -p /dev/ttyUSB0 -m -s 5\n", progname);
-    printf("\n73 de YO3ITI\n\n");
+    printf(CLR_CYAN _("SA818 control tool, version %s \u00A9 YO3ITI, yo3iti@gmail.com\n",
+                      "SA818 control, versiune %s \u00A9 YO3ITI, yo3iti@gmail.com\n") CLR_RESET,
+           VERSION);
 }
 
-static volatile int keep_running = 1;
-void handle_sigint(int _)
-{
-    (void)_;
-    keep_running = 0;
-}
 
-/**
- * @brief Delay in milliseconds
- * @brief Întârziere în milisecunde.
- *
- * @param ms Value in milliseconds / Valoare în milisecunde.
- * @version 1.0.2
- */
-void delay_ms(int ms)
-{
-    struct timespec ts = {ms / 1000, (ms % 1000) * 1000000L};
-    nanosleep(&ts, NULL);
-}
-
-/**
- * @brief Get the baudrate object - baud rate mapping
- * @brief Obține obiectul baudrate - maparea ratei de baud.
- *
- * @param baud
- * @return speed_t
- */
-speed_t get_baudrate(int baud)
-{
-    switch (baud)
-    {
-    case 1200:
-        return B1200;
-    case 2400:
-        return B2400;
-    case 4800:
-        return B4800;
-    case 9600:
-        return B9600;
-    case 19200:
-        return B19200;
-    case 38400:
-        return B38400;
-    case 57600:
-        return B57600;
-    case 115200:
-        return B115200;
-    default:
-        fprintf(stderr, _("⚠️ Unsupported baud %d, using 9600\n", "⚠️ Baud %d este incorect\n"), baud);
-        return B9600;
-    }
-}
 
 /**
  * @brief Initialize serial port
@@ -380,35 +210,12 @@ int send_command(int fd, const char *cmd)
     return -1;
 }
 
-/**
- * @brief Parse frequency argument to extract TX and RX frequencies.
- * @brief Parsează argumentul de frecvență pentru a extrage frecvențele TX și RX.
- * @param arg frequency argument in text format (e.g., "145.500" or "145.500,145.
- * @param arg frecvența în format text (ex: "145.500" sau "145.500,145.600")
- * @param tx transmit frequency output / frecvența de transmisie output
- * @param rx receive frequency output / frecvența de recepție output
- * @return int 0 dacă analiza a avut succes, -1 în caz de eroare.
- * @version 1.0.2
- */
-int parse_freqs(const char *arg, double *tx, double *rx)
+
+
+/*
+int parse_tail(const char *arg, const char *tail)
 {
-    if (strchr(arg, ','))
-    {
-        if (sscanf(arg, "%lf,%lf", tx, rx) != 2)
-            return -1;
-    }
-    else
-    {
-        if (sscanf(arg, "%lf", tx) != 1)
-            return -1;
-        *rx = *tx;
-    }
-    if (*tx < 100.0 || *tx > 480.0)
-        return -1;
-    if (*rx < 100.0 || *rx > 480.0)
-        return -1;
-    return 0;
-}
+} */
 
 /**
  * @brief Monitor serial port for incoming data and RSSI polling.
@@ -498,7 +305,7 @@ int main(int argc, char *argv[])
     const char *device = DEFAULT_PORT;
     int baudrate = 9600, databits = 8, stopbits = 1, sql = 3;
     char parity = 'N';
-    int narrow = 0, monitor = 0, info = 0, rssi_interval = 0;
+    int narrow = 0, monitor = 0, info = 0, rssi_interval = 0, tail = 1;
     double tx = 0, rx = 0;
     float tx_tone = 0.0;
     float rx_tone = 0.0;
@@ -509,19 +316,20 @@ int main(int argc, char *argv[])
         {"device", required_argument, 0, 'd'},
         {"sql", required_argument, 0, 'q'},
         {"freq", required_argument, 0, 'f'},
+        {"txtone", required_argument, 0, 't'},
+        {"rxtone", required_argument, 0, 'r'},
+        {"tail", required_argument, 0, 'a'},
         {"narrow", no_argument, 0, 'n'},
         {"volume", required_argument, 0, 'v'},
         {"monitor", no_argument, 0, 'm'},
         {"info", no_argument, 0, 'i'},
         {"rssi", required_argument, 0, 's'}, // changed from r
         {"version", no_argument, 0, 'u'},    // changed from v
-        {"txtone", required_argument, 0, 't'},
-        {"rxtone", required_argument, 0, 'r'},
         {"help", no_argument, 0, 'h'},
         {0, 0, 0, 0}};
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "p:d:b:t:s:l:q:f:nv:mir:u:t:r:h", long_opts, NULL)) != -1)
+    while ((opt = getopt_long(argc, argv, "p:d:q:f:t:r:a:nv:mis:uh", long_opts, NULL)) != -1)
     {
         switch (opt)
         {
@@ -544,6 +352,9 @@ int main(int argc, char *argv[])
                 return 1;
             }
             break;
+        case 'a':
+            snprintf(command, sizeof(command), "AT+SETTAIL=%d", atoi(optarg));
+            break;
         case 'n':
             narrow = 1;
             break;
@@ -560,8 +371,8 @@ int main(int argc, char *argv[])
             rssi_interval = atoi(optarg);
             break;
         case 'u':
-            printf(CLR_CYAN _("SA818 control tool, version %s \u00A9 YO3ITI, yo3iti@gmail.com\n", "SA818 control, versiune %s \u00A9 YO3ITI, yo3iti@gmail.com\n") CLR_RESET, VERSION);
-            break;
+            print_version();
+            return 0;
         case 't':
             // CTCSS TX tone
             // float
@@ -591,7 +402,8 @@ int main(int argc, char *argv[])
     printf(_("🔌 Sending AT+DMOCONNECT...\n", "🔌 Trimit AT+DMOCONNECT...\n"));
     if (send_command(fd, "AT+DMOCONNECT\r\n") != 0)
     {
-        printf(CLR_RED _("❌ Could not connect to SA818. Check TX/RX wiring.", "❌ Nu m-am putut conecta la SA818. Verifică conexiunea TX/RX.") CLR_RESET "\n");
+        printf(CLR_RED _("❌ Could not connect to SA818. Check TX/RX wiring.",
+                         "❌ Nu m-am putut conecta la SA818. Verifică conexiunea TX/RX.") CLR_RESET "\n");
         close(fd);
         return 1;
     }
@@ -603,6 +415,17 @@ int main(int argc, char *argv[])
 
     if (tx > 0)
     {
+        double tx_freq = tx;
+        double rx_freq = tx;
+
+        if (!check_band(&tx_freq, &rx_freq))
+        {
+            printf(CLR_RED _("❌ Aborting configuration — out-of-band frequencies.\n",
+                                "❌ Frecvențe din afara benzii de radioamatori. Configurare anulată.\n") CLR_RESET);
+            close(fd);
+            return 1;
+        }
+
         int tx_code = get_ctcss_code(tx_tone); // Convert 100.0 Hz -> 1000
         int rx_code = get_ctcss_code(rx_tone);
         snprintf(command, sizeof(command),
@@ -615,6 +438,11 @@ int main(int argc, char *argv[])
 
     if (monitor)
         monitor_serial(fd, rssi_interval);
+
+    if (tail)
+        snprintf(command, sizeof(command), "AT+SETTAIL=1\r\n");
+
+    
 
     close(fd);
     return 0;
