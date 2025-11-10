@@ -5,7 +5,7 @@
 
 
 
-//static volatile int keep_running = 1;
+//static volatile int keep_running = 1; 
 
 void handle_sigint(int _)
 {

@@ -17,7 +17,7 @@ int send_command(int fd, const char *cmd);
 void monitor_serial(int fd, int rssi_interval);
 
 #ifndef VERSION
-#define VERSION "1.0.2"
+#define VERSION "1.0.3"
 #endif
 
 

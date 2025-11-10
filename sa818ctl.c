@@ -44,8 +44,8 @@
  */
 void print_version()
 {
-    printf(CLR_CYAN _("\nSA818 control tool, version %s \u00A9 YO3ITI, yo3iti@gmail.com\n\n",
-                      "\nSA818 control, versiune %s \u00A9 YO3ITI, yo3iti@gmail.com\n\n") CLR_RESET,
+    printf(CLR_CYAN _("SA818 control tool, version %s \u00A9 YO3ITI, yo3iti@gmail.com\n",
+                      "SA818 control, versiune %s \u00A9 YO3ITI, yo3iti@gmail.com\n") CLR_RESET,
            VERSION);
 }
 
@@ -329,7 +329,7 @@ int main(int argc, char *argv[])
         {0, 0, 0, 0}};
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "p:d:q:f:t:r:a:nv:mis:u:h", long_opts, NULL)) != -1)
+    while ((opt = getopt_long(argc, argv, "p:d:q:f:t:r:a:nv:mis:uh", long_opts, NULL)) != -1)
     {
         switch (opt)
         {
